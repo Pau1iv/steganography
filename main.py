@@ -78,7 +78,6 @@ class SteganographyApp:
 
             self.image.putdata(image_pixels)
 
-            # Ask user for file path to save the image
             file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
             if file_path:
                 self.image.save(file_path)

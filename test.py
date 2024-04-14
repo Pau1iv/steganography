@@ -20,8 +20,8 @@ class TestSteganographyApp(unittest.TestCase):
 
     def test_hide_and_read_text(self):
         """Test hiding and reading text from an image."""
-        # Test with image containing text
-        with open('img_with_text.png', 'rb') as file:
+
+        with open('img_without_text.png', 'rb') as file:
             self.app.image = Image.open(file)
         text_to_hide = "Secret message hidden in the image."
         self.app.text_to_hide = text_to_hide
@@ -29,8 +29,7 @@ class TestSteganographyApp(unittest.TestCase):
         self.app.read_text()
         self.assertEqual(text_to_hide, self.app.read_text_entry.get("1.0", "end-1c"))
 
-        # Test with image without text
-        with open('img_without_text.png', 'rb') as file:
+        with open('img_with_text.png', 'rb') as file:
             self.app.image = Image.open(file)
         self.app.read_text()
         self.assertEqual("", self.app.read_text_entry.get("1.0", "end-1c"))
