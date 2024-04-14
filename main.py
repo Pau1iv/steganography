@@ -54,7 +54,7 @@ class SteganographyApp:
             self.image_label.config(image=self.photo)
 
     def hide_text(self):
-        """Hide the entered text in the image."""
+        """Hide the entered text in the image and save it to a file."""
         if self.image and self.text_to_hide:
             encrypted_text = self.encrypt_text(self.text_to_hide)
             text_length = len(encrypted_text)
@@ -72,8 +72,11 @@ class SteganographyApp:
                 pixel_index += 1
 
             self.image.putdata(image_pixels)
-            self.photo = ImageTk.PhotoImage(self.image)
-            self.image_label.config(image=self.photo)
+
+            # Ask user for file path to save the image
+            file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
+            if file_path:
+                self.image.save(file_path)
 
     def read_text(self):
         """Read the hidden text from the image."""
