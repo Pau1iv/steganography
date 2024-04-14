@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet,InvalidToken
+import os
 
 class SteganographyApp:
     """Class representing an application for hiding text in images."""
@@ -38,7 +39,7 @@ class SteganographyApp:
 
         self.image = None
         self.text_to_hide = ""
-        self.encryption_key = None
+        self.encryption_key = self.load_encryption_key()
 
     def confirm_text(self):
         """Confirm the entered text."""
@@ -62,10 +63,14 @@ class SteganographyApp:
 
             binary_text = ''.join(format(byte, '08b') for byte in encrypted_text)
 
+            # Add text length to the beginning of the image
+            image_with_text_length = binary_text_length + binary_text
+            image_with_text_length += "0" * ((-len(image_with_text_length)) % 8)  # Pad with zeros
+
             image_pixels = list(self.image.getdata())
             pixel_index = 0
 
-            for bit in binary_text_length + binary_text:
+            for bit in image_with_text_length:
                 pixel = list(image_pixels[pixel_index])
                 pixel[-1] = (pixel[-1] & 254) | int(bit)
                 image_pixels[pixel_index] = tuple(pixel)
@@ -89,12 +94,20 @@ class SteganographyApp:
 
             text_length = int(binary_text_length, 2)
 
+            if text_length == 0:
+                self.read_text_entry.delete("1.0", "end")
+                self.read_text_entry.insert("1.0", "No hidden text found in the image.")
+                return
+
             binary_text = ''
             pixel_index = 32
 
             for _ in range(text_length * 8):
-                binary_text += str(image_pixels[pixel_index][-1] & 1)
-                pixel_index += 1
+                if pixel_index < len(image_pixels):
+                    binary_text += str(image_pixels[pixel_index][-1] & 1)
+                    pixel_index += 1
+                else:
+                    break
 
             encrypted_text = bytes(int(binary_text[i:i + 8], 2) for i in range(0, len(binary_text), 8))
             decrypted_text = self.decrypt_text(encrypted_text)
@@ -105,7 +118,8 @@ class SteganographyApp:
     def encrypt_text(self, text):
         """Encrypt the text."""
         if not self.encryption_key:
-            self.encryption_key = Fernet.generate_key()
+            self.encryption_key = self.generate_encryption_key()
+            self.save_encryption_key(self.encryption_key)
 
         cipher_suite = Fernet(self.encryption_key)
         encrypted_text = cipher_suite.encrypt(text.encode())
@@ -114,13 +128,35 @@ class SteganographyApp:
 
     def decrypt_text(self, encrypted_text):
         """Decrypt the text."""
-        if self.encryption_key:
+        if not self.encryption_key:
+            return "No encryption key found. Cannot decrypt text."
+
+        try:
             cipher_suite = Fernet(self.encryption_key)
             decrypted_text = cipher_suite.decrypt(encrypted_text).decode()
-
             return decrypted_text
+        except InvalidToken:
+            return "Invalid or expired token. Cannot decrypt text."
+        except Exception as e:
+            return f"An error occurred during decryption: {e}"
+
+    def generate_encryption_key(self):
+        """Generate a new encryption key."""
+        return Fernet.generate_key()
+
+    def save_encryption_key(self, key):
+        """Save the encryption key to a file."""
+        with open("encryption_key.txt", "wb") as key_file:
+            key_file.write(key)
+
+    def load_encryption_key(self):
+        """Load the encryption key from a file."""
+        key_file_path = "encryption_key.txt"
+        if os.path.exists(key_file_path):
+            with open(key_file_path, "rb") as key_file:
+                return key_file.read()
         else:
-            return ""
+            return None
 
 def main():
     root = tk.Tk()
